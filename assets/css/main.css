@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add your custom CSS rules below this line */
+@layer components {
+  /* Example of a custom button style */
+  .btn-primary {
+    @apply px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200;
+  }
+  
+  /* Add more custom components as needed */
+}
+
+@layer utilities {
+  /* Example of a custom utility */
+  .text-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Add more custom utilities as needed */
+}
+
+/* Custom colors can be added in your tailwind.config.js */
+/* You can also add global styles here */
+body {
+  @apply bg-gray-50 text-gray-900;
+}
