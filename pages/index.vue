@@ -34,7 +34,7 @@ const handleScroll = () => {
         : viewportWidth - (progress * totalDistance)
 
       // Create stepping effect (4 steps across the screen)
-      const stepCount = 4
+      const stepCount = 16
       const stepProgress = progress * stepCount
       const currentStep = Math.floor(stepProgress)
       const stepFrac = stepProgress - currentStep
