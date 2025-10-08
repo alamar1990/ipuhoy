@@ -13,21 +13,33 @@ const handleScroll = () => {
   scrollY.value = scrollTop
   scrollProgress.value = Math.min(scrollTop / maxScroll, 1)
 
+  // Get viewport width for responsive movement
+  const viewportWidth = window.innerWidth
+
   // Update square positions based on scroll
   const squares = document.querySelectorAll('.square')
   squares.forEach((square, index) => {
     const isLeft = index % 2 === 0
-    const distance = parseFloat(square.getAttribute('data-distance') || '1000')
     const delay = parseFloat(square.getAttribute('data-delay') || '0')
     const progress = Math.max(0, Math.min(1, (scrollProgress.value - delay) / (1 - delay)))
 
-    if (progress > 0 && progress < 1) {
-      const translateX = isLeft
-        ? -100 + (progress * 200) // -100% to 100%
-        : 100 - (progress * 200) // 100% to -100%
+    if (progress >= 0 && progress <= 1) {
+      // Calculate the distance to move (full viewport width + square width)
+      const squareWidth = square.offsetWidth
+      const totalDistance = viewportWidth + squareWidth
 
-      square.style.transform = `translateX(${translateX}%)`
-      square.style.opacity = `${0.5 + (progress * 0.5)}`
+      // Calculate translateX based on progress and screen width
+      const translateX = isLeft
+        ? -squareWidth + (progress * totalDistance) // Move from left to right
+        : viewportWidth - (progress * totalDistance) // Move from right to left
+
+      // Calculate opacity based on progress (fade in as it enters, fade out as it exits)
+      const opacity = progress < 0.5
+        ? progress * 2 // Fade in during first half
+        : 2 - (progress * 2) // Fade out during second half
+
+      square.style.transform = `translateX(${translateX}px)`
+      square.style.opacity = `${opacity}`
     }
   })
 }
@@ -128,13 +140,28 @@ html {
 .square {
   will-change: transform, opacity;
   transition: transform 0.1s ease-out, opacity 0.1s ease-out;
-  opacity: 0.5;
-  transform: translateX(-100%);
+  opacity: 0;
+  position: fixed;
+  z-index: 10;
 }
 
-/* Right-aligned squares start from the right */
-.square[data-delay] {
+/* Set initial positions for squares */
+.square:nth-child(1) {
+  transform: translateX(-100%);
+  top: 25%;
+  left: 0;
+}
+
+.square:nth-child(2) {
   transform: translateX(100%);
+  top: 50%;
+  right: 0;
+}
+
+.square:nth-child(3) {
+  transform: translateX(-100%);
+  top: 75%;
+  left: 0;
 }
 
 /* Parallax effect */
