@@ -1,19 +1,31 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
-  
-  // CSS configuration
-  css: [
-    '~/assets/scss/main.scss'
-  ],
-  
+
   // Modules
   modules: [
     '@nuxtjs/tailwindcss',
-    '@nuxt/eslint'
+    '@nuxt/eslint',
   ],
-  
+  devtools: { enabled: true },
+
+  // App configuration
+  app: {
+    head: {
+      link: [
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+        },
+      ],
+    },
+  },
+
+  // CSS configuration
+  css: [
+    '~/assets/scss/main.scss',
+  ],
+  compatibilityDate: '2025-07-15',
+
   // Vite configuration for SCSS
   vite: {
     css: {
@@ -25,21 +37,21 @@ export default defineNuxtConfig({
             @use "sass:list";
             @use "sass:math";
             @use "@/assets/scss/_variables.scss" as *;
-          `
-        }
-      }
-    }
+          `,
+        },
+      },
+    },
   },
-  
-  // App configuration
-  app: {
-    head: {
-      link: [
-        {
-          rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
-        }
-      ]
-    }
-  }
+
+  eslint: {
+    config: {
+      stylistic: {
+        indent: 2,
+        quotes: 'single',
+        semi: false,
+        jsx: true,
+      },
+
+    },
+  },
 })
