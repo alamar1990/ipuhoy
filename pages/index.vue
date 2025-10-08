@@ -1,77 +1,67 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 
-import { animate, createTimer, createTimeline, utils, onScroll } from 'animejs'
+const scrollY = ref(0)
+const scrollProgress = ref(0)
+
+const handleScroll = () => {
+  const scrollContainer = document.querySelector('.scroll-container')
+  if (!scrollContainer) return
+
+  const { scrollTop, scrollHeight, clientHeight } = scrollContainer
+  const maxScroll = scrollHeight - clientHeight
+  scrollY.value = scrollTop
+  scrollProgress.value = Math.min(scrollTop / maxScroll, 1)
+
+  // Update square positions based on scroll
+  const squares = document.querySelectorAll('.square')
+  squares.forEach((square, index) => {
+    const isLeft = index % 2 === 0
+    const distance = parseFloat(square.getAttribute('data-distance') || '1000')
+    const delay = parseFloat(square.getAttribute('data-delay') || '0')
+    const progress = Math.max(0, Math.min(1, (scrollProgress.value - delay) / (1 - delay)))
+
+    if (progress > 0 && progress < 1) {
+      const translateX = isLeft
+        ? -100 + (progress * 200) // -100% to 100%
+        : 100 - (progress * 200) // 100% to -100%
+
+      square.style.transform = `translateX(${translateX}%)`
+      square.style.opacity = `${0.5 + (progress * 0.5)}`
+    }
+  })
+}
 
 onMounted(() => {
-  const [container] = utils.$('.scroll-container')
-  const debug = true
+  const scrollContainer = document.querySelector('.scroll-container')
+  if (scrollContainer) {
+    scrollContainer.addEventListener('scroll', handleScroll)
+  }
+  // Initial position update
+  handleScroll()
+})
 
-  // Animation
-
-  animate('.square', {
-    x: '15rem',
-    rotate: '1turn',
-    duration: 2000,
-    alternate: true,
-    loop: true,
-    autoplay: onScroll({ container, debug }),
-  })
-
-  // Timer
-
-  const [$timer] = utils.$('.timer')
-
-  createTimer({
-    duration: 2000,
-    alternate: true,
-    loop: true,
-    onUpdate: (self) => {
-      $timer.innerHTML = self.iterationCurrentTime
-    },
-    autoplay: onScroll({
-      target: $timer.parentNode,
-      container,
-      debug,
-    }),
-  })
-
-  // Timeline
-
-  const circles = utils.$('.circle')
-
-  createTimeline({
-    alternate: true,
-    loop: true,
-    autoplay: onScroll({
-      target: circles[0],
-      container,
-      debug,
-    }),
-  })
-    .add(circles[2], { x: '9rem' })
-    .add(circles[1], { x: '9rem' })
-    .add(circles[0], { x: '9rem' })
+onUnmounted(() => {
+  const scrollContainer = document.querySelector('.scroll-container')
+  if (scrollContainer) {
+    scrollContainer.removeEventListener('scroll', handleScroll)
+  }
 })
 </script>
 
 <template>
-  <div class="min-h-screen bg-blue-950">
+  <div class="min-h-screen bg-gradient-to-b from-blue-950 to-purple-900">
     <div class="scroll-container h-screen overflow-y-auto">
-      <div class="space-y-20">
-        <!-- Scroll down indicator -->
-        <div class="min-h-[80vh] flex items-center justify-center">
-          <div class="text-center">
-            <div class="text-2xl font-semibold text-gray-700 mb-4">
-              Scroll down to see animations
-            </div>
-            <div class="animate-bounce text-gray-500">
+      <div class="space-y-0">
+        <!-- Hero Section -->
+        <div class="min-h-screen flex items-center justify-center relative overflow-hidden">
+          <div class="text-center z-10">
+            <div class="animate-bounce text-white">
               <svg
-                class="w-8 h-8 mx-auto"
+                class="w-10 h-10 mx-auto"
                 fill="none"
-                stroke="currentColor"
                 viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
+                stroke="currentColor"
               >
                 <path
                   stroke-linecap="round"
@@ -84,32 +74,43 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Square animation -->
-        <div class="min-h-[100vh] flex items-center justify-center">
-          <div class="w-20 h-20 bg-blue-500 square" />
-        </div>
-
-        <!-- Timer -->
-        <div class="min-h-[100vh] flex items-center justify-center">
-          <div class="text-center">
-            <div class="text-lg font-medium text-gray-700 mb-2">
-              Timer
-            </div>
-            <div class="text-4xl font-mono bg-gray-100 p-4 rounded-lg inline-block min-w-[120px]">
-              <span class="timer">0.00</span>
+        <!-- Parallax Squares -->
+        <div class="min-h-[150vh] relative">
+          <!-- Square 1 - Left to Right -->
+          <div
+            class="fixed top-1/4 left-0 w-32 h-32 bg-blue-500 square rounded-lg shadow-lg"
+            data-distance="1200"
+            data-delay="0"
+          >
+            <div class="absolute inset-0 flex items-center justify-center text-white font-bold text-lg">
+              1
             </div>
           </div>
-        </div>
 
-        <!-- Circles timeline -->
-        <div class="min-h-[100vh] flex items-center justify-center">
-          <div class="flex space-x-8">
-            <div
-              v-for="i in 3"
-              :key="i"
-              class="w-16 h-16 bg-green-500 rounded-full circle"
-            />
+          <!-- Square 2 - Right to Left -->
+          <div
+            class="fixed top-2/4 right-0 w-40 h-40 bg-green-500 square rounded-lg shadow-lg"
+            data-distance="1000"
+            data-delay="0.2"
+          >
+            <div class="absolute inset-0 flex items-center justify-center text-white font-bold text-xl">
+              2
+            </div>
           </div>
+
+          <!-- Square 3 - Left to Right -->
+          <div
+            class="fixed top-3/4 left-0 w-48 h-48 bg-purple-500 square rounded-lg shadow-lg"
+            data-distance="800"
+            data-delay="0.4"
+          >
+            <div class="absolute inset-0 flex items-center justify-center text-white font-bold text-2xl">
+              3
+            </div>
+          </div>
+
+          <!-- Content to create scroll space -->
+          <div class="h-[300vh] w-full" />
         </div>
       </div>
     </div>
@@ -120,11 +121,36 @@ onMounted(() => {
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 /* Animation styles */
 .square {
-  transition: transform 0.3s ease;
+  will-change: transform, opacity;
+  transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+  opacity: 0.5;
+  transform: translateX(-100%);
+}
+
+/* Right-aligned squares start from the right */
+.square[data-delay] {
+  transform: translateX(100%);
+}
+
+/* Parallax effect */
+.fixed {
+  transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scroll-container {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 /* Ensure the scroll container takes full height */
