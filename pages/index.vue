@@ -28,18 +28,39 @@ const handleScroll = () => {
       const squareWidth = square.offsetWidth
       const totalDistance = viewportWidth + squareWidth
 
-      // Calculate translateX based on progress and screen width
-      const translateX = isLeft
-        ? -squareWidth + (progress * totalDistance) // Move from left to right
-        : viewportWidth - (progress * totalDistance) // Move from right to left
+      // Calculate base X position (smooth movement)
+      const baseX = isLeft
+        ? -squareWidth + (progress * totalDistance)
+        : viewportWidth - (progress * totalDistance)
 
-      // Calculate opacity based on progress (fade in as it enters, fade out as it exits)
-      const opacity = progress < 0.5
-        ? progress * 2 // Fade in during first half
-        : 2 - (progress * 2) // Fade out during second half
+      // Create stepping effect (4 steps across the screen)
+      const stepCount = 4
+      const stepProgress = progress * stepCount
+      const currentStep = Math.floor(stepProgress)
+      const stepFrac = stepProgress - currentStep
 
-      square.style.transform = `translateX(${translateX}px)`
-      square.style.opacity = `${opacity}`
+      // Enhanced vertical bounce effect
+      const bounceHeight = 60 // Increased from 30 to 60 pixels
+      // Use a more pronounced bounce curve
+      const bounceProgress = Math.pow(Math.sin(stepFrac * Math.PI), 0.7)
+      const translateY = -bounceHeight * bounceProgress
+
+      // More noticeable rotation during movement
+      const rotation = isLeft
+        ? -8 + (bounceProgress * 16) // Increased from 5/10 to 8/16
+        : 8 - (bounceProgress * 16) // for more dramatic tilt
+
+      // Opacity - fade in at start, stay visible, fade out at end
+      const opacity = progress < 0.1
+        ? progress * 10
+        : progress > 0.9 ? (1 - progress) * 10 : 1
+
+      // Apply all transforms
+      square.style.transform = `translateX(${baseX}px) translateY(${translateY}px) rotate(${rotation}deg)`
+      square.style.opacity = `${1}`
+
+      // Optional: Add a shadow that changes with the bounce
+      square.style.filter = `drop-shadow(0 ${5 + (bounceProgress * 10)}px 5px rgba(0,0,0,0.3))`
     }
   })
 }
@@ -138,11 +159,14 @@ html {
 
 /* Animation styles */
 .square {
-  will-change: transform, opacity;
-  transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+  will-change: transform, opacity, filter;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease-out,
+              filter 0.15s ease-out;
   opacity: 0;
   position: fixed;
   z-index: 10;
+  transform-origin: bottom center;
 }
 
 /* Set initial positions for squares */
