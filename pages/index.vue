@@ -83,10 +83,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    class="min-h-screen"
-    style="background-image: url('/background.png'); background-size: 50%; background-repeat: repeat-x; background-position: center; background-attachment: fixed; background-color: #1e1b4b;"
-  >
+  <div class="app-background">
     <div class="scroll-container h-screen overflow-y-auto">
       <div class="space-y-0">
         <!-- Hero Section -->
@@ -112,37 +109,43 @@ onUnmounted(() => {
 
         <!-- Parallax Squares -->
         <div class="min-h-[150vh] relative">
-          <!-- Square 1 - Left to Right -->
+          <!-- Character 1 - Left to Right -->
           <div
-            class="fixed top-1/4 left-0 w-32 h-32 bg-blue-500 square rounded-lg shadow-lg"
+            class="fixed top-1/4 left-0 w-48 h-48 square"
             data-distance="1200"
             data-delay="0"
           >
-            <div class="absolute inset-0 flex items-center justify-center text-white font-bold text-lg">
-              1
-            </div>
+            <img
+              src="/character2_no_back.png"
+              alt="Character 1"
+              class="w-full h-full object-contain"
+            >
           </div>
 
-          <!-- Square 2 - Right to Left -->
+          <!-- Character 2 - Right to Left -->
           <div
-            class="fixed top-2/4 right-0 w-40 h-40 bg-green-500 square rounded-lg shadow-lg"
+            class="fixed top-2/4 right-0 w-42 h-42 square"
             data-distance="1000"
             data-delay="0.2"
           >
-            <div class="absolute inset-0 flex items-center justify-center text-white font-bold text-xl">
-              2
-            </div>
+            <img
+              src="/character2_no_back.png"
+              alt="Character 2"
+              class="w-full h-full object-contain"
+            >
           </div>
 
-          <!-- Square 3 - Left to Right -->
+          <!-- Character 3 - Left to Right -->
           <div
-            class="fixed top-3/4 left-0 w-48 h-48 bg-purple-500 square rounded-lg shadow-lg"
+            class="fixed top-3/4 left-0 w-48 h-48 square"
             data-distance="800"
             data-delay="0.4"
           >
-            <div class="absolute inset-0 flex items-center justify-center text-white font-bold text-2xl">
-              3
-            </div>
+            <img
+              src="/character3_no_back.png"
+              alt="Character 3"
+              class="w-full h-full object-contain"
+            >
           </div>
 
           <!-- Content to create scroll space -->
@@ -152,6 +155,29 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.app-background {
+  @apply min-h-screen relative;
+  background-color: #1e1b4b;
+}
+
+.app-background::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('/background.png');
+  background-size: 300px; /* Adjust this value to control the size of each repeated tile */
+  background-repeat: repeat;
+  background-position: center center;
+  opacity: 0.6; /* Adjust this value to control the visibility of the pattern */
+  z-index: 0;
+  background-blend-mode: overlay;
+}
+</style>
 
 <style scoped>
 /* Smooth scrolling */
