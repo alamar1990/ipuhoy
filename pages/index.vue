@@ -83,7 +83,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-b from-blue-950 to-purple-900">
+  <div
+    class="min-h-screen"
+    style="background-image: url('/background.png'); background-size: 50%; background-repeat: repeat-x; background-position: center; background-attachment: fixed; background-color: #1e1b4b;"
+  >
     <div class="scroll-container h-screen overflow-y-auto">
       <div class="space-y-0">
         <!-- Hero Section -->
