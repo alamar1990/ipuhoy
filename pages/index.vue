@@ -291,12 +291,23 @@ html {
   z-index: 1;
   opacity: 1 !important;
 
-  .sun{
+  .sun {
     mix-blend-mode: normal;
     opacity: 1 !important;
-    height: 50px;
-    top: 12px;
-    left: 9px;
+    height: 45px;
+    top: 14px;
+    left: 10px;
+    animation: spin 10s linear infinite;
+    transform-origin: center;
+  }
+  
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 }
 
