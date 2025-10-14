@@ -10,7 +10,7 @@ const characterIndices = ref<number[]>([])
 const generateRandomIndices = () => {
   // Create array of all possible character indices (1-6)
   const allIndices = Array.from({ length: 6 }, (_, i) => i + 1)
-  
+
   // Shuffle the array using Fisher-Yates algorithm
   for (let i = allIndices.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -187,8 +187,24 @@ onUnmounted(() => {
 
 <template>
   <div class="app-background">
+    <div class="relative w-48 h-48 top-title">
+      <img
+          v-if="isMounted"
+          :src="`/sun.png`"
+          class="absolute object-contain z-10 sun"
+          style="mix-blend-mode: normal; opacity: 1 !important;"
+      >
+      <img
+          v-if="isMounted"
+          :src="`/title_nosun.png`"
+          class="relative w-full h-full object-contain z-0"
+          style="mix-blend-mode: normal; opacity: 1 !important;"
+      >
+    </div>
+    <div class="relative w-full flex justify-center">
+
     <div class="scroll-container h-screen overflow-y-auto">
-      <div class="space-y-0">
+
         <!-- Hero Section -->
         <div class="min-h-screen flex items-center justify-center relative overflow-hidden">
           <div class="text-center z-10">
@@ -263,6 +279,29 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+.top-title {
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  opacity: 1 !important;
+
+  .sun{
+    mix-blend-mode: normal;
+    opacity: 1 !important;
+    height: 50px;
+    top: 12px;
+    left: 9px;
+  }
+}
+
+
+
 .app-background {
   @apply min-h-screen relative;
   background-color: #1e1b4b;
@@ -282,14 +321,6 @@ onUnmounted(() => {
   opacity: 0.6; /* Adjust this value to control the visibility of the pattern */
   z-index: 0;
   background-blend-mode: overlay;
-}
-</style>
-
-<style scoped>
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-  overflow-x: hidden;
 }
 
 /* Animation styles */
