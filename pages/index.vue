@@ -187,39 +187,41 @@ onUnmounted(() => {
 
 <template>
   <div class="app-background">
-    <div class="relative w-48 h-48 top-title">
-      <img
-          v-if="isMounted"
-          :src="`/sun.png`"
-          class="absolute object-contain z-10 sun"
-          style="mix-blend-mode: normal; opacity: 1 !important;"
-      >
-      <img
-          v-if="isMounted"
-          :src="`/title_nosun.png`"
-          class="relative w-full h-full object-contain z-0"
-          style="mix-blend-mode: normal; opacity: 1 !important;"
-      >
-    </div>
-    <div class="relative w-full flex justify-center">
+    <!-- Sticky Header -->
+    <header class="sticky top-10 z-50">
+      <div class="relative w-48 h-32 mx-auto top-title">
+        <img
+            v-if="isMounted"
+            src="/sun.png"
+            class="absolute object-contain z-10 sun"
+            style="mix-blend-mode: normal; opacity: 1 !important;"
+        >
+        <img
+            v-if="isMounted"
+            src="/title_nosun.png"
+            class="relative w-full h-full object-contain z-0 title"
+            style="mix-blend-mode: normal; opacity: 1 !important;"
+        >
+      </div>
+    </header>
 
-    <div class="scroll-container h-screen overflow-y-auto">
-
-        <!-- Hero Section -->
+    <!-- Main Content -->
+    <main class="z-10">
+      <div class="scroll-container h-screen overflow-y-auto">
         <div class="min-h-screen flex items-center justify-center relative overflow-hidden">
           <div class="text-center z-10">
             <div class="animate-bounce text-white">
               <svg
-                class="w-10 h-10 mx-auto"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+                  class="w-10 h-10 mx-auto"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
               >
                 <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
                 />
               </svg>
             </div>
@@ -227,46 +229,46 @@ onUnmounted(() => {
         </div>
 
         <!-- Parallax Squares -->
-        <div class="min-h-[150vh] relative">
+        <div class="min-h-[100vh] relative">
           <!-- Character 1 - Random position -->
           <div
-            class="w-48 h-48 square"
-            data-distance="1200"
+              class="w-48 h-48 square"
+              data-distance="1200"
           >
             <img
-              v-if="isMounted"
-              :src="getCharacterPath(0)"
-              alt="Character 1"
-              class="w-full h-full object-contain"
-              key="char-1"
+                v-if="isMounted"
+                :src="getCharacterPath(0)"
+                alt="Character 1"
+                class="w-full h-full object-contain"
+                key="char-1"
             >
           </div>
 
           <!-- Character 2 - Random position -->
           <div
-            class="w-48 h-48 square"
-            data-distance="1000"
+              class="w-48 h-48 square"
+              data-distance="1000"
           >
             <img
-              v-if="isMounted"
-              :src="getCharacterPath(1)"
-              alt="Character 2"
-              class="w-full h-full object-contain"
-              key="char-2"
+                v-if="isMounted"
+                :src="getCharacterPath(1)"
+                alt="Character 2"
+                class="w-full h-full object-contain"
+                key="char-2"
             >
           </div>
 
           <!-- Character 3 - Random position -->
           <div
-            class="w-48 h-48 square"
-            data-distance="800"
+              class="w-48 h-48 square"
+              data-distance="800"
           >
             <img
-              v-if="isMounted"
-              :src="getCharacterPath(2)"
-              alt="Character 3"
-              class="w-full h-full object-contain"
-              key="char-3"
+                v-if="isMounted"
+                :src="getCharacterPath(2)"
+                alt="Character 3"
+                class="w-full h-full object-contain"
+                key="char-3"
             >
           </div>
 
@@ -274,7 +276,7 @@ onUnmounted(() => {
           <div class="h-[300vh] w-full" />
         </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -295,8 +297,8 @@ html {
     mix-blend-mode: normal;
     opacity: 1 !important;
     height: 45px;
-    top: 14px;
-    left: 10px;
+    top: -12px;
+    left: 12px;
     animation: spin 10s linear infinite;
     transform-origin: center;
   }
