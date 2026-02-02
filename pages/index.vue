@@ -2,27 +2,19 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 
 const scrollY = ref(0)
-const scrollProgress = ref(0)
 const isMounted = ref(false)
 const characterIndices = ref<number[]>([])
 
-// Generate unique random indices on client side only
+// Generate unique random indices (1-6)
 const generateRandomIndices = () => {
-  // Create array of all possible character indices (1-6)
   const allIndices = Array.from({ length: 6 }, (_, i) => i + 1)
-
-  // Shuffle the array using Fisher-Yates algorithm
   for (let i = allIndices.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [allIndices[i], allIndices[j]] = [allIndices[j], allIndices[i]]
   }
-  
-  // Return first 3 unique indices
   return allIndices.slice(0, 3)
 }
 
-
-// Get character path by index
 const getCharacterPath = (index: number) => {
   return `/character${characterIndices.value[index] || 1}_no_back.png`
 }
@@ -33,148 +25,142 @@ const handleScroll = () => {
 
   const { scrollTop, scrollHeight, clientHeight } = scrollContainer
   const maxScroll = scrollHeight - clientHeight
-  scrollY.value = scrollTop
-  scrollProgress.value = Math.min(scrollTop / maxScroll, 1)
+  const currentScrollPercent = Math.min(scrollTop / maxScroll, 1) // 0 to 1
 
-  // Get viewport width for responsive movement
   const viewportWidth = window.innerWidth
-
-  // Update square positions based on scroll
   const squares = document.querySelectorAll('.square')
-  squares.forEach((square, index) => {
-    const squareWidth = square.offsetWidth // Get the actual width of the current square
-    const isLeft = index % 2 === 0
-    const delay = parseFloat(square.getAttribute('data-delay') || '0')
-    const progress = Math.max(0, Math.min(1, (scrollProgress.value - delay) / (1 - delay)))
 
-    if (progress >= 0 && progress <= 1) {
-      // Calculate the distance to move (shorter distance for better visibility)
-      const squareWidth = square.offsetWidth
-      const totalDistance = viewportWidth * 0.6 + squareWidth // Reduced to 60% of viewport width
+  squares.forEach((square) => {
+    // Retrieve pre-calculated random values
+    const startScrollPct = parseFloat(square.getAttribute('data-start') || '0')
+    const durationPct = parseFloat(square.getAttribute('data-duration') || '0.4')
+    const isLeftStart = square.getAttribute('data-direction') === 'left'
+    const speedFactor = parseFloat(square.dataset.speedFactor || '1')
 
-      // Calculate base X position (smooth movement)
-      // const baseX = isLeft
-      //   ? -squareWidth + (progress * totalDistance)
-      //   : viewportWidth - (progress * totalDistance)
+    // Calculate progress for this specific character's window
+    // This ensures consistent speed regardless of when they start
+    let charProgress = (currentScrollPercent - startScrollPct) / durationPct
 
-      // Create stepping effect (fewer steps for more fluid movement)
-      const stepCount = 6
-      const stepProgress = progress * stepCount
-      const currentStep = Math.floor(stepProgress)
-      const stepFrac = stepProgress - currentStep
-      // Get random properties for this square
-      const bounceHeight = parseFloat(square.dataset.bounceHeight || '60')
-      const rotationFactor = parseFloat(square.dataset.rotationFactor || '1')
-      const horizontalOffset = parseFloat(square.dataset.horizontalOffset || '0')
-      const speedFactor = parseFloat(square.dataset.speedFactor || '1')
-
-      // Adjust progress based on speed factor and ensure it stays within bounds
-      const adjustedProgress = Math.min(1, Math.max(0, progress * speedFactor))
-
-      // Enhanced vertical bounce effect with random height
-      const bounceProgress = Math.pow(Math.sin(stepFrac * Math.PI), 0.4 + (Math.random() * 0.3 - 0.15))
-      const translateY = -bounceHeight * bounceProgress
-
-      // Dynamic rotation based on bounce and random factor
-      const baseRotation = 10 * rotationFactor
-      const rotation = isLeft
-        ? -baseRotation + (bounceProgress * baseRotation * 2)
-        : baseRotation - (bounceProgress * baseRotation * 2)
-
-      // Calculate start and end points with reduced travel distance
-      const travelDistance = viewportWidth * 0.7 // Only travel 70% of the viewport width
-      const startX = isLeft ? -squareWidth : viewportWidth - travelDistance
-      const endX = isLeft ? travelDistance : -squareWidth
-
-      // Calculate base X position with easing for smoother movement
-      const easedProgress = easeInOutCubic(adjustedProgress)
-      const baseX = startX + (endX - startX) * easedProgress
-
-      // Opacity - fade in at start, stay visible, fade out at end
-      const opacity = progress < 0.1
-        ? progress * 10
-        : progress > 0.9 ? (1 - progress) * 10 : 1
-
-      // Get current scale from CSS variable with fallback to 1
-      const currentScale = parseFloat(square.style.getPropertyValue('--random-scale') || '1')
-
-      // Apply all transforms with random scale and horizontal offset
-      square.style.transform = `
-        translateX(${baseX + horizontalOffset}px)
-        translateY(${translateY}px)
-        rotate(${rotation}deg)
-        scale(${currentScale})
-      `
-      // Add subtle shadow that changes with bounce
-      const shadowY = 5 + (bounceProgress * 15)
-      square.style.filter = `drop-shadow(0 ${shadowY}px 8px rgba(0,0,0,${0.2 + bounceProgress * 0.2}))`
-      square.style.opacity = `${1}`
-
-      // Optional: Add a shadow that changes with the bounce
-      square.style.filter = `drop-shadow(0 ${5 + (bounceProgress * 10)}px 5px rgba(0,0,0,0.3))`
+    // Allow them to walk off-screen slightly (extends animation range)
+    if (charProgress < -0.2 || charProgress > 1.2) {
+      // Optimization: hide element if far out of animation range
+      (square as HTMLElement).style.opacity = '0'
+      return
     }
+
+    // Clamp for math calculations
+    const activeProgress = Math.max(0, Math.min(1, charProgress))
+
+    // 1. HORIZONTAL MOVEMENT (Full Viewport)
+    const squareWidth = (square as HTMLElement).offsetWidth
+    // Start completely offscreen (-squareWidth) and end completely offscreen (viewportWidth)
+    const startX = isLeftStart ? -squareWidth : viewportWidth
+    const endX = isLeftStart ? viewportWidth : -squareWidth
+
+    // Linear movement across screen based on progress
+    const currentX = startX + (endX - startX) * charProgress
+
+    // 2. WALKING BOUNCE (Sine Wave)
+    const steps = 8 // How many steps they take across screen
+    const bounceFrequency = charProgress * Math.PI * steps
+    // Absolute value of Sin creates the "hop" effect
+    const bounceHeight = Math.abs(Math.sin(bounceFrequency)) * 30 * speedFactor
+
+    // 3. WALKING ROTATION (Rocking)
+    // Rocks back and forth with the steps
+    const rotationBase = Math.cos(bounceFrequency) * 5 * speedFactor
+
+    // 4. SCALE & FACING
+    const baseScale = parseFloat(square.style.getPropertyValue('--random-scale') || '1')
+    // If starting from right, flip image horizontally to face left
+    const facingScale = isLeftStart ? 1 : -1
+
+    const FADE_DURATION = 0.1; // 10% of the animation duration for fade in/out
+    let opacity = 1;
+
+    if (charProgress < FADE_DURATION) {
+      // Fade in: 0% to 100% opacity in the first 10%
+      opacity = charProgress / FADE_DURATION;
+    } else if (charProgress > (1 - FADE_DURATION)) {
+      // Fade out: 100% to 0% opacity in the last 10%
+      opacity = 1 - ((charProgress - (1 - FADE_DURATION)) / FADE_DURATION);
+    }
+
+    // Apply Transform
+    // Note: We use scaleX for facing direction
+    (square as HTMLElement).style.transform = `
+      translate3d(${currentX}px, ${-bounceHeight}px, 0)
+      rotate(${rotationBase}deg)
+      scale(${baseScale})
+      scaleX(${facingScale})
+    `
+    ;(square as HTMLElement).style.opacity = `${Math.max(0, opacity)}`
+
+    // Dynamic Shadow
+    const shadowIntensity = 1 - (bounceHeight / 30) // Shadow gets lighter when they jump up
+    ;(square as HTMLElement).style.filter = `drop-shadow(0px ${10 + bounceHeight/2}px ${5 + bounceHeight/3}px rgba(0,0,0,${0.3 * shadowIntensity}))`
   })
 }
 
 const setRandomInitialPositions = () => {
   const squares = document.querySelectorAll('.square')
-  squares.forEach((square) => {
-    // Random position between 10% and 70% of viewport height
-    const randomTop = 10 + Math.random() * 60
-    // Random side (0 for left, 1 for right)
+  // We divide the scroll height into segments to ensure characters don't all appear at once
+  const segmentSize = 0.5 / squares.length
+
+  squares.forEach((square, index) => {
+    const el = square as HTMLElement
+
+    // 1. VERTICAL POSITION (Random "Lane")
+    // Keep them within middle 60% of screen height so they don't get cut off
+    const randomTop = 20 + Math.random() * 50
+    el.style.top = `${randomTop}%`
+
+    // 2. DIRECTION (Left to Right OR Right to Left)
     const isLeft = Math.random() > 0.5
-    // Random delay between 0 and 1 second for staggered start
-    const randomDelay = (Math.random() * 1).toFixed(2)
-    // Random scale between 0.6 and 1.2 for depth effect
-    const randomScale = 0.6 + Math.random() * 0.6
-    // Random bounce height between 40 and 100
-    const bounceHeight = 40 + Math.random() * 60
-    // Random rotation factor for more dynamic movement
-    const rotationFactor = 0.5 + Math.random() * 2
-    // Random horizontal offset (-20 to 20px)
-    const horizontalOffset = (Math.random() * 40 - 20).toFixed(1)
-    // Random animation speed factor (0.8x to 1.5x)
-    const speedFactor = 0.8 + Math.random() * 0.7
+    el.setAttribute('data-direction', isLeft ? 'left' : 'right')
 
-    // Store custom properties for animation
-    square.dataset.bounceHeight = bounceHeight
-    square.dataset.rotationFactor = rotationFactor
-    square.dataset.horizontalOffset = horizontalOffset
-    square.dataset.speedFactor = speedFactor
+    // 3. TIMING (When do they start walking?)
+    // We stagger them so they don't overlap too much.
+    // data-start is the scroll % where they BEGIN walking.
+    // We max it at 0.5 (50% scroll) so they definitely finish before the page ends.
+    const randomOffset = Math.random() * 0.1
+    const startPct = (index * 0.15) + randomOffset
 
-    // Apply random values
-    square.style.top = `${randomTop}%`
-    square.style.left = isLeft ? '0' : 'auto'
-    square.style.right = isLeft ? 'auto' : '0'
-    square.style.setProperty('--random-scale', randomScale)
-    square.style.setProperty('--speed-factor', speedFactor)
-    square.setAttribute('data-delay', randomDelay)
+    // 4. DURATION (How "fast" is the walk?)
+    // This represents percentage of total page scroll needed to cross screen.
+    // 0.4 means the user has to scroll 40% of the page height for the char to cross.
+    // This creates consistent speed.
+    const durationPct = 0.35 + (Math.random() * 0.1)
 
-    // Calculate initial position completely off-screen
-    const startX = isLeft ? -square.offsetWidth : window.innerWidth
-    const transform = `translateX(${startX + parseFloat(horizontalOffset)}px) scale(${randomScale})`
-    square.style.transform = transform
+    // 5. SIZE & VARIATION
+    const randomScale = 0.7 + Math.random() * 0.5
+    const speedFactor = 0.8 + Math.random() * 0.4
+
+    // Store Data
+    el.setAttribute('data-start', startPct.toFixed(3))
+    el.setAttribute('data-duration', durationPct.toFixed(3))
+    el.dataset.speedFactor = speedFactor.toString()
+    el.style.setProperty('--random-scale', randomScale.toString())
+
+    // Initial State (Hidden)
+    el.style.opacity = '0'
   })
 }
 
-// Easing function for smoother animation
-const easeInOutCubic = (t) => {
-  return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1
-}
-
 onMounted(() => {
-  // Generate random indices on client side only
   characterIndices.value = generateRandomIndices()
   isMounted.value = true
-  
+
   const scrollContainer = document.querySelector('.scroll-container')
   if (scrollContainer) {
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true })
   }
-  
-  // Set random positions first, then handle initial scroll
-  setRandomInitialPositions()
-  handleScroll()
+
+  // Initialize
+  setTimeout(() => {
+    setRandomInitialPositions()
+    handleScroll() // Trigger once to set initial positions
+  }, 100)
 })
 
 onUnmounted(() => {
@@ -207,74 +193,33 @@ onUnmounted(() => {
 
     <!-- Main Content -->
     <main class="z-10">
-      <div class="scroll-container h-screen overflow-y-auto">
-        <div class="min-h-screen flex items-center justify-center relative overflow-hidden">
-          <div class="text-center z-10">
-            <div class="animate-bounce text-white">
-              <svg
-                  class="w-10 h-10 mx-auto"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-              >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                />
-              </svg>
-            </div>
+      <div class="scroll-container h-screen overflow-y-auto relative">
+
+        <div class="absolute top-0 left-0 w-full h-screen flex items-center justify-center pointer-events-none z-0">
+          <div class="text-center animate-bounce text-white/50">
+            <p class="mb-2 text-sm uppercase tracking-widest">Scroll to explore</p>
+            <svg class="w-6 h-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
           </div>
         </div>
 
-        <!-- Parallax Squares -->
-        <div class="min-h-[100vh] relative">
-          <!-- Character 1 - Random position -->
-          <div
-              class="w-48 h-48 square"
-              data-distance="1200"
-          >
-            <img
-                v-if="isMounted"
-                :src="getCharacterPath(0)"
-                alt="Character 1"
-                class="w-full h-full object-contain"
-                key="char-1"
-            >
+        <div class="fixed inset-0 pointer-events-none z-20 overflow-hidden">
+          <div class="square w-48 h-48">
+            <img v-if="isMounted" :src="getCharacterPath(0)" class="w-full h-full object-contain drop-shadow-lg">
           </div>
 
-          <!-- Character 2 - Random position -->
-          <div
-              class="w-48 h-48 square"
-              data-distance="1000"
-          >
-            <img
-                v-if="isMounted"
-                :src="getCharacterPath(1)"
-                alt="Character 2"
-                class="w-full h-full object-contain"
-                key="char-2"
-            >
+          <div class="square w-48 h-48">
+            <img v-if="isMounted" :src="getCharacterPath(1)" class="w-full h-full object-contain drop-shadow-lg">
           </div>
 
-          <!-- Character 3 - Random position -->
-          <div
-              class="w-48 h-48 square"
-              data-distance="800"
-          >
-            <img
-                v-if="isMounted"
-                :src="getCharacterPath(2)"
-                alt="Character 3"
-                class="w-full h-full object-contain"
-                key="char-3"
-            >
+          <div class="square w-48 h-48">
+            <img v-if="isMounted" :src="getCharacterPath(2)" class="w-full h-full object-contain drop-shadow-lg">
           </div>
-
-          <!-- Content to create scroll space -->
-          <div class="h-[300vh] w-full" />
         </div>
+
+        <div class="w-full h-[400vh]"></div>
+
       </div>
     </main>
   </div>
@@ -302,7 +247,7 @@ html {
     animation: spin 10s linear infinite;
     transform-origin: center;
   }
-  
+
   @keyframes spin {
     from {
       transform: rotate(0deg);
@@ -314,67 +259,50 @@ html {
 }
 
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
 .app-background {
   @apply min-h-screen relative;
   background-color: #1e1b4b;
+  overflow: hidden;
 }
 
 .app-background::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: url('/background.png');
-  background-size: 300px; /* Adjust this value to control the size of each repeated tile */
+  inset: 0;
+  background-image: url('/background.png'); /* Ensure this path is correct */
+  background-size: 300px;
   background-repeat: repeat;
-  background-position: center center;
-  opacity: 0.6; /* Adjust this value to control the visibility of the pattern */
+  opacity: 0.6;
   z-index: 0;
   background-blend-mode: overlay;
-}
-
-/* Animation styles */
-.square {
-  will-change: transform, opacity, filter;
-  transition:
-    transform calc(0.25s * var(--speed-factor, 1)) cubic-bezier(0.2, 0.8, 0.2, 1),
-    opacity calc(0.4s * var(--speed-factor, 1)) ease-out,
-    filter calc(0.2s * var(--speed-factor, 1)) ease-out;
-  opacity: 0;
-  position: fixed;
-  z-index: 10;
   pointer-events: none;
-  transform-origin: bottom center;
-  backface-visibility: hidden;
 }
 
-/* Initial positions will be set by JavaScript */
+/* CRITICAL FIX:
+   Removed 'transition: transform'
+   When JS updates position on every scroll event, CSS transitions cause
+   jitters/lag because they try to interpolate between the rapid updates.
+*/
 .square {
-  position: fixed;
-  opacity: 0;
+  position: absolute; /* Changed to absolute within the fixed container */
+  will-change: transform;
+  /* Only transition opacity for smooth fade in/out */
+  transition: opacity 0.2s linear;
+  left: 0;
+  /* Default transform to hide initially */
+  transform: translateX(-100vw);
 }
 
-/* Parallax effect */
-.fixed {
-  transition: transform 0.1s ease-out, opacity 0.1s ease-out;
-}
-
-/* Hide scrollbar for Chrome, Safari and Opera */
-.scroll-container::-webkit-scrollbar {
-  display: none;
-}
-
-/* Hide scrollbar for IE, Edge and Firefox */
+/* Hide scrollbars */
+.scroll-container::-webkit-scrollbar { display: none; }
 .scroll-container {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
-
-/* Ensure the scroll container takes full height */
-.scroll-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
 </style>
