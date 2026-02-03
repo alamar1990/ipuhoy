@@ -8,6 +8,7 @@ export default defineNuxtConfig({
   // App configuration
   app: {
     head: {
+      title: 'iPuhoy',
       link: [
         {
           rel: 'stylesheet',
