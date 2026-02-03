@@ -128,9 +128,40 @@ onUnmounted(() => {
 <template>
   <div class="app-background font-handwritten text-slate-100">
     <header class="fixed top-0 left-0 w-full z-50 pointer-events-none">
-      <div class="relative w-48 h-32 mx-auto top-title filter drop-shadow-xl mt-4">
-        <img v-if="isMounted" src="/sun.png" class="absolute object-contain z-10 sun">
-        <img v-if="isMounted" src="/title_nosun.png" class="relative w-full h-full object-contain z-20 title">
+      <div class="relative w-full max-w-6xl mx-auto px-4 mt-4 filter drop-shadow-xl">
+        <div class="flex items-center justify-center gap-4">
+          <div class="relative w-48 h-32">
+            <NuxtImg
+                v-if="isMounted"
+                src="/sun.png"
+                loading="lazy"
+                class="absolute object-contain z-10 sun"
+                alt="Tribal Sun"
+            />
+            <NuxtImg
+                v-if="isMounted"
+                loading="lazy"
+                src="/title_nosun.png"
+                class="relative w-full h-full object-contain z-20 title"
+                alt="Puhoy Title"
+            />
+          </div>
+
+          <a
+              href="https://www.instagram.com/ipuhoy"
+              target="_blank"
+              class="z-50 pointer-events-auto group pt-4"
+          >
+            <div class="w-8 h-8 sm:w-16 sm:h-12 relative tribal-icon-container">
+              <NuxtImg
+                  src="/instagram.svg"
+                  loading="lazy"
+                  class="w-8 h-8 object-contain filter drop-shadow-md group-hover:brightness-110 animate-float-pulse"
+                  alt="Instagram"
+              />
+            </div>
+          </a>
+        </div>
       </div>
     </header>
 
@@ -233,5 +264,35 @@ onUnmounted(() => {
   z-index: 5;
   pointer-events: none;
   mix-blend-mode: overlay;
+}
+
+/* NEW: Floating Pulse Animation */
+@keyframes floatPulse {
+  0% {
+    transform: scale(1) translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.05) translate(2px, -2px) rotate(2deg);
+  }
+  50% {
+    transform: scale(1) translate(0, -4px) rotate(0deg);
+  }
+  75% {
+    transform: scale(1.05) translate(-2px, -2px) rotate(-2deg);
+  }
+  100% {
+    transform: scale(1) translate(0, 0) rotate(0deg);
+  }
+}
+
+.animate-float-pulse {
+  animation: floatPulse 4s ease-in-out infinite;
+  /* Will-change optimizes browser rendering for these properties */
+  will-change: transform;
+}
+
+/* Optional: Make it slightly faster on hover for feedback */
+.group:hover .animate-float-pulse {
+  animation-duration: 2s;
 }
 </style>
