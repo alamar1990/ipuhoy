@@ -107,10 +107,17 @@ onMounted(() => {
           </div>
 
           <div class="text-center opacity-0 translate-y-10 transition-all duration-1000 delay-500" :class="{ '!translate-y-0 !opacity-100': visibleSections.has('artworks') }">
-            <NuxtLink to="/gallery" class="inline-block px-12 py-4 bg-[#a53b19] text-[#f0e6d2] text-2xl tracking-widest hover:bg-[#c2410c] hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg border-y-2 border-[#f0e6d2]/30 rounded-lg group relative">
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">✦</span>
-              ENTER GALLERY
-              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">✦</span>
+            <NuxtLink to="/gallery" class="group relative inline-flex items-center gap-4 px-10 py-3 text-[#f0e6d2] text-2xl tracking-widest overflow-hidden">
+
+              <div class="relative w-12 h-12 flex-shrink-0 animate-random-float">
+                <NuxtImg
+                    src="/galleryicon.png"
+                    class="w-full h-full object-contain filter drop-shadow-md group-hover:brightness-110"
+                    alt="Gallery Icon"
+                />
+              </div>
+
+              <span class="relative z-10">ENTER GALLERY</span>
             </NuxtLink>
           </div>
         </div>
@@ -142,3 +149,16 @@ onMounted(() => {
     />
   </div>
 </template>
+
+<style>
+@keyframes float-random {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(2px, -3px) rotate(2deg); }
+  50% { transform: translate(-1px, 2px) rotate(-1deg); }
+  75% { transform: translate(-2px, -1px) rotate(1deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-random-float {
+  animation: float-random 3s ease-in-out infinite;
+}
+</style>
