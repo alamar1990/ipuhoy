@@ -8,6 +8,8 @@ const uploading = ref(false)
 const uploadStatus = ref('')
 const selectedFile = ref<File | null>(null)
 const previewUrl = ref<string | null>(null)
+// NEW: State for the custom name
+const artworkName = ref('')
 
 // --- FETCH EXISTING ARTWORKS ---
 const { data: existingArtworks, refresh: refreshGallery } = await useFetch('/api/artworks', {
@@ -21,6 +23,8 @@ const handleFileSelect = (event: Event) => {
     const file = input.files[0]
     selectedFile.value = file
     previewUrl.value = URL.createObjectURL(file)
+    // Auto-fill name based on filename (removing extension)
+    artworkName.value = file.name.replace(/\.[^/.]+$/, "")
     uploadStatus.value = ''
   }
 }
@@ -28,11 +32,18 @@ const handleFileSelect = (event: Event) => {
 const handleUpload = async () => {
   if (!selectedFile.value) return
 
+  if (!artworkName.value.trim()) {
+    uploadStatus.value = '⚠️ The artifact requires a name!'
+    return
+  }
+
   uploading.value = true
   uploadStatus.value = 'Summoning artifact...'
 
   const formData = new FormData()
   formData.append('file', selectedFile.value)
+  // NEW: Append the custom name
+  formData.append('name', artworkName.value)
 
   try {
     await $fetch('/api/upload', {
@@ -46,6 +57,7 @@ const handleUpload = async () => {
     setTimeout(() => {
       selectedFile.value = null
       previewUrl.value = null
+      artworkName.value = '' // Reset name
       uploadStatus.value = ''
     }, 3000)
   } catch (error) {
@@ -59,7 +71,7 @@ const handleUpload = async () => {
 const deletingId = ref<string | null>(null)
 
 const handleDelete = async (filename: string) => {
-  if (!confirm('Are you sure you want to banish this artifact forever?')) return
+  if (!confirm('Are you sure you want to vanish this artifact forever?')) return
 
   deletingId.value = filename
 
@@ -121,20 +133,32 @@ onMounted(() => {
           <div class="absolute bottom-0 right-0 w-10 h-10 z-20 bg-[#D4A373] clip-triangle-br"></div>
 
           <div class="relative z-20 bg-[#1a1614] rounded-[14px] p-8 min-h-[400px] flex flex-col items-center justify-center border-[2px] border-[#5D4037]">
+
             <div v-if="previewUrl" class="w-full h-full flex flex-col items-center space-y-6">
               <div class="relative w-64 h-64 rounded-xl overflow-hidden border-4 border-[#cc5500] shadow-[0_0_20px_rgba(204,85,0,0.3)]">
                 <img :src="previewUrl" class="w-full h-full object-cover">
               </div>
-              <div class="text-[#F5DEB3] text-center">
-                <p class="text-xl mb-4">{{ selectedFile?.name }}</p>
-                <div class="flex gap-4 justify-center">
-                  <button @click="selectedFile = null; previewUrl = null" class="px-6 py-2 bg-[#3E2723] text-[#F5DEB3] rounded-lg hover:bg-[#5D4037] transition-colors">CANCEL</button>
-                  <button @click="handleUpload" :disabled="uploading" class="px-6 py-2 bg-[#cc5500] text-white rounded-lg hover:bg-[#ff6b00] transition-colors shadow-lg disabled:opacity-50">
-                    {{ uploading ? 'SUMMONING...' : 'CONFIRM UPLOAD' }}
+
+              <div class="w-full max-w-xs space-y-4">
+                <div class="space-y-1">
+                  <label class="text-[#F5DEB3] text-xs font-bold tracking-widest uppercase ml-1">Name of Artifact</label>
+                  <input
+                      v-model="artworkName"
+                      type="text"
+                      placeholder="e.g. The Ancient One"
+                      class="w-full bg-[#3E2723]/80 border-2 border-[#5D4037] text-[#F5DEB3] rounded-lg p-3 outline-none focus:border-[#cc5500] transition-colors text-center font-sans placeholder-[#F5DEB3]/30"
+                  >
+                </div>
+
+                <div class="flex gap-4 justify-center pt-2">
+                  <button @click="selectedFile = null; previewUrl = null" class="px-6 py-2 bg-[#3E2723] text-[#F5DEB3] rounded-lg hover:bg-[#5D4037] transition-colors text-sm font-bold tracking-wider">CANCEL</button>
+                  <button @click="handleUpload" :disabled="uploading" class="px-6 py-2 bg-[#cc5500] text-white rounded-lg hover:bg-[#ff6b00] transition-colors shadow-lg disabled:opacity-50 text-sm font-bold tracking-wider">
+                    {{ uploading ? 'SUMMONING...' : 'CONFIRM' }}
                   </button>
                 </div>
               </div>
             </div>
+
             <div v-else class="text-center space-y-6">
               <div class="w-32 h-32 mx-auto border-4 border-dashed border-[#5D4037] rounded-full flex items-center justify-center text-4xl text-[#5D4037] group-hover:border-[#cc5500] group-hover:text-[#cc5500] transition-colors relative">
                 <input type="file" accept="image/*" @change="handleFileSelect" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30">
@@ -145,7 +169,8 @@ onMounted(() => {
                 <p class="text-[#F5DEB3]/60 font-sans">or click to browse your inventory</p>
               </div>
             </div>
-            <div v-if="uploadStatus" class="mt-6 text-xl font-bold animate-pulse" :class="uploadStatus.includes('failed') ? 'text-red-400' : 'text-green-400'">
+
+            <div v-if="uploadStatus" class="mt-6 text-xl font-bold animate-pulse" :class="uploadStatus.includes('failed') || uploadStatus.includes('requires') ? 'text-red-400' : 'text-green-400'">
               {{ uploadStatus }}
             </div>
           </div>
@@ -168,7 +193,6 @@ onMounted(() => {
               class="relative group w-20"
           >
             <div class="relative bg-[#3E2723] rounded-lg p-1.5 shadow-md border border-[#5D4037] hover:border-[#cc5500] transition-all hover:scale-105 hover:z-10">
-
               <div class="relative aspect-square rounded-md overflow-hidden bg-black/40 mb-1.5">
                 <NuxtImg
                     :src="art.path"
@@ -191,7 +215,6 @@ onMounted(() => {
                   </button>
                 </div>
               </div>
-
               <div class="text-center px-0.5">
                 <h3 class="text-[#F5DEB3] text-[10px] font-sans truncate leading-tight">{{ art.title }}</h3>
               </div>
@@ -207,7 +230,6 @@ onMounted(() => {
       </div>
 
     </main>
-
   </div>
 </template>
 
