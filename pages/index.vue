@@ -49,6 +49,23 @@ const generateRandomIndices = () => {
   return allIndices.slice(0, 3)
 }
 
+const contactForm = ref({
+  name: '',
+  email: '',
+  message: ''
+})
+
+const handleContact = () => {
+  const { name, email, message } = contactForm.value
+
+  // Construct the mailto link
+  const subject = encodeURIComponent(`Portfolio Contact from ${name}`)
+  const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`)
+
+  // Open default mail client
+  window.location.href = `mailto:ipuhoy@gmail.com?subject=${subject}&body=${body}`
+}
+
 const getCharacterPath = (index: number) => {
   return `/character${characterIndices.value[index] || 1}_no_back.png`
 }
@@ -247,20 +264,38 @@ onUnmounted(() => {
           </h2>
 
           <div class="w-full max-w-xl opacity-0 translate-y-10 transition-all duration-1000 delay-300 contact-form-container">
-            <form class="space-y-6" @submit.prevent>
+            <form class="space-y-6" @submit.prevent="handleContact">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-1">
-                  <input type="text" placeholder="Name" class="puhoy-input">
+                  <input
+                      v-model="contactForm.name"
+                      type="text"
+                      placeholder="Name"
+                      class="puhoy-input"
+                      required
+                  >
                 </div>
                 <div class="space-y-1">
-                  <input type="email" placeholder="Email" class="puhoy-input">
+                  <input
+                      v-model="contactForm.email"
+                      type="email"
+                      placeholder="Email"
+                      class="puhoy-input"
+                      required
+                  >
                 </div>
               </div>
               <div class="space-y-1">
-                <textarea rows="4" placeholder="Message" class="puhoy-input resize-none"></textarea>
+                <textarea
+                    v-model="contactForm.message"
+                    rows="4"
+                    placeholder="Message"
+                    class="puhoy-input resize-none"
+                    required
+                ></textarea>
               </div>
               <div class="pt-4 flex justify-center">
-                <button class="group relative px-12 py-3 bg-[#a53b19] text-[#f0e6d2] text-2xl tracking-widest hover:bg-[#c2410c] hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg border-y-2 border-[#f0e6d2]/30 rounded-lg">
+                <button type="submit" class="group relative px-12 py-3 bg-[#a53b19] text-[#f0e6d2] text-2xl tracking-widest hover:bg-[#c2410c] hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg border-y-2 border-[#f0e6d2]/30 rounded-lg">
                   <span class="absolute left-2 top-1/2 -translate-y-1/2 text-white/40 text-sm">❮❮</span>
                   <span>SEND</span>
                   <span class="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 text-sm">❯❯</span>
