@@ -26,17 +26,12 @@ const tones = [
 // --- Process Artworks ---
 // Transform the server data into UI data (adding styles, rotation, etc.)
 const artworks = computed(() => {
-  // If no data found, return empty
   if (!rawArtworks.value) return []
 
   return rawArtworks.value.map((file, index) => {
-    // Generate deterministic random values based on index
-    // This ensures the layout looks "wild" but stays the same on refresh
     const seed = index * 1337
     const rot = `${((seed % 10) - 5).toFixed(1)}deg`
     const y = `${(seed % 60) - 30}px`
-
-    // Cycle through the color tones
     const tone = tones[index % tones.length]
 
     return {
@@ -247,11 +242,15 @@ onUnmounted(() => {
 
                   <div class="relative z-10 bg-[#1a1614] rounded-[14px] aspect-[3/4] overflow-hidden shadow-inner border-[2px] border-[#5D4037]">
                     <div class="w-full h-full relative group-hover:scale-110 transition-transform duration-700 ease-in-out">
-                      <img
+
+                      <NuxtImg
                           :src="art.image"
                           :alt="art.title"
+                          loading="lazy"
+                          format="webp"
                           class="w-full h-full object-cover opacity-70 mix-blend-luminosity group-hover:opacity-100 group-hover:mix-blend-normal transition-all duration-500"
-                      >
+                      />
+
                       <div class="absolute inset-0 pointer-events-none transition-all duration-500"
                            :class="art.tone"
                            style="box-shadow: inset 0 0 20px currentColor;">
@@ -317,7 +316,7 @@ onUnmounted(() => {
         </section>
 
         <div class="h-24 w-full flex items-center justify-center text-[#f0e6d2]/30 text-sm font-sans">
-          © 2024 Puhoy Portfolio
+          © 2024 iPuhoy Portfolio
         </div>
 
         <div class="fixed inset-0 pointer-events-none z-20 overflow-hidden">

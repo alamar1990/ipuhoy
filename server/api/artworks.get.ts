@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { process } from 'std-env'
 
 export default defineEventHandler((event) => {
   // Finds the 'public/artworks' folder on your computer/server
