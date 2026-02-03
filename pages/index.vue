@@ -29,7 +29,7 @@ const artworks = [1, 2, 3, 4].map((id) => {
       "shadow-amber-900/50",
       "shadow-rose-900/50"
     ][id - 1],
-    image: `/character${id + 1}_no_back.jpg`
+    image: `/character${id + 1}_no_back.png`
   };
 
   return {
