@@ -1,11 +1,45 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 
+// --- State ---
 const scrollY = ref(0)
 const isMounted = ref(false)
 const characterIndices = ref<number[]>([])
+const visibleSections = ref<Set<string>>(new Set())
 
-// Generate unique random indices (1-6)
+// --- Data: Artworks ---
+const artworks = [1, 2, 3, 4].map((id) => {
+  // Generate random rotation between -3 and 3 degrees for a natural look
+  const rot = `${(Math.random() * 6 - 3).toFixed(1)}deg`;
+  // Generate random vertical shift between -20 and 20 pixels
+  const y = `${Math.floor(Math.random() * 40 - 20)}px`;
+
+  // Base artwork data
+  const base = {
+    id,
+    title: [
+      "The Oracle",
+      "Lost Spirit",
+      "Chicken God",
+      "Wandering Eye"
+    ][id - 1],
+    tone: [
+      "shadow-orange-900/50",
+      "shadow-teal-900/50",
+      "shadow-amber-900/50",
+      "shadow-rose-900/50"
+    ][id - 1],
+    image: `/character${id + 1}_no_back.jpg`
+  };
+
+  return {
+    ...base,
+    rot,
+    y
+  };
+});
+
+// --- Character Logic (Unchanged) ---
 const generateRandomIndices = () => {
   const allIndices = Array.from({ length: 6 }, (_, i) => i + 1)
   for (let i = allIndices.length - 1; i > 0; i--) {
@@ -19,75 +53,50 @@ const getCharacterPath = (index: number) => {
   return `/character${characterIndices.value[index] || 1}_no_back.png`
 }
 
+// --- Animation Loop (Unchanged) ---
 const handleScroll = () => {
   const scrollContainer = document.querySelector('.scroll-container')
   if (!scrollContainer) return
 
   const { scrollTop, scrollHeight, clientHeight } = scrollContainer
   const maxScroll = scrollHeight - clientHeight
-  const currentScrollPercent = Math.min(scrollTop / maxScroll, 1) // 0 to 1
+  const currentScrollPercent = Math.min(scrollTop / maxScroll, 1)
 
-  const viewportWidth = window.innerWidth
   const squares = document.querySelectorAll('.square')
-
   squares.forEach((square) => {
-    // Retrieve pre-calculated random values
     const startScrollPct = parseFloat(square.getAttribute('data-start') || '0')
     const durationPct = parseFloat(square.getAttribute('data-duration') || '0.4')
     const isLeftStart = square.getAttribute('data-direction') === 'left'
     const speedFactor = parseFloat(square.dataset.speedFactor || '1')
 
-    // Calculate progress for this specific character's window
-    // This ensures consistent speed regardless of when they start
     let charProgress = (currentScrollPercent - startScrollPct) / durationPct
 
-    // Allow them to walk off-screen slightly (extends animation range)
     if (charProgress < -0.2 || charProgress > 1.2) {
-      // Optimization: hide element if far out of animation range
       (square as HTMLElement).style.opacity = '0'
       return
     }
 
-    // Clamp for math calculations
-    const activeProgress = Math.max(0, Math.min(1, charProgress))
-
-    // 1. HORIZONTAL MOVEMENT (Full Viewport)
+    const viewportWidth = window.innerWidth
     const squareWidth = (square as HTMLElement).offsetWidth
-    // Start completely offscreen (-squareWidth) and end completely offscreen (viewportWidth)
     const startX = isLeftStart ? -squareWidth : viewportWidth
     const endX = isLeftStart ? viewportWidth : -squareWidth
-
-    // Linear movement across screen based on progress
     const currentX = startX + (endX - startX) * charProgress
 
-    // 2. WALKING BOUNCE (Sine Wave)
-    const steps = 8 // How many steps they take across screen
+    const steps = 8
     const bounceFrequency = charProgress * Math.PI * steps
-    // Absolute value of Sin creates the "hop" effect
     const bounceHeight = Math.abs(Math.sin(bounceFrequency)) * 30 * speedFactor
-
-    // 3. WALKING ROTATION (Rocking)
-    // Rocks back and forth with the steps
     const rotationBase = Math.cos(bounceFrequency) * 5 * speedFactor
-
-    // 4. SCALE & FACING
     const baseScale = parseFloat(square.style.getPropertyValue('--random-scale') || '1')
-    // If starting from right, flip image horizontally to face left
     const facingScale = isLeftStart ? 1 : -1
 
-    const FADE_DURATION = 0.1; // 10% of the animation duration for fade in/out
-    let opacity = 1;
-
+    const FADE_DURATION = 0.1
+    let opacity = 1
     if (charProgress < FADE_DURATION) {
-      // Fade in: 0% to 100% opacity in the first 10%
-      opacity = charProgress / FADE_DURATION;
+      opacity = charProgress / FADE_DURATION
     } else if (charProgress > (1 - FADE_DURATION)) {
-      // Fade out: 100% to 0% opacity in the last 10%
-      opacity = 1 - ((charProgress - (1 - FADE_DURATION)) / FADE_DURATION);
+      opacity = 1 - ((charProgress - (1 - FADE_DURATION)) / FADE_DURATION)
     }
 
-    // Apply Transform
-    // Note: We use scaleX for facing direction
     (square as HTMLElement).style.transform = `
       translate3d(${currentX}px, ${-bounceHeight}px, 0)
       rotate(${rotationBase}deg)
@@ -96,53 +105,43 @@ const handleScroll = () => {
     `
     ;(square as HTMLElement).style.opacity = `${Math.max(0, opacity)}`
 
-    // Dynamic Shadow
-    const shadowIntensity = 1 - (bounceHeight / 30) // Shadow gets lighter when they jump up
+    const shadowIntensity = 1 - (bounceHeight / 30)
     ;(square as HTMLElement).style.filter = `drop-shadow(0px ${10 + bounceHeight/2}px ${5 + bounceHeight/3}px rgba(0,0,0,${0.3 * shadowIntensity}))`
+  })
+}
+
+// --- Content Observer (Unchanged) ---
+const setupObserver = () => {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        visibleSections.value.add(entry.target.id)
+        entry.target.classList.add('is-visible')
+      }
+    })
+  }, { threshold: 0.15 })
+
+  document.querySelectorAll('section').forEach((el) => {
+    observer.observe(el)
   })
 }
 
 const setRandomInitialPositions = () => {
   const squares = document.querySelectorAll('.square')
-  // We divide the scroll height into segments to ensure characters don't all appear at once
-  const segmentSize = 0.5 / squares.length
-
   squares.forEach((square, index) => {
     const el = square as HTMLElement
-
-    // 1. VERTICAL POSITION (Random "Lane")
-    // Keep them within middle 60% of screen height so they don't get cut off
-    const randomTop = 20 + Math.random() * 50
+    const randomTop = 15 + Math.random() * 55
     el.style.top = `${randomTop}%`
-
-    // 2. DIRECTION (Left to Right OR Right to Left)
     const isLeft = Math.random() > 0.5
     el.setAttribute('data-direction', isLeft ? 'left' : 'right')
-
-    // 3. TIMING (When do they start walking?)
-    // We stagger them so they don't overlap too much.
-    // data-start is the scroll % where they BEGIN walking.
-    // We max it at 0.5 (50% scroll) so they definitely finish before the page ends.
-    const randomOffset = Math.random() * 0.1
-    const startPct = (index * 0.15) + randomOffset
-
-    // 4. DURATION (How "fast" is the walk?)
-    // This represents percentage of total page scroll needed to cross screen.
-    // 0.4 means the user has to scroll 40% of the page height for the char to cross.
-    // This creates consistent speed.
-    const durationPct = 0.35 + (Math.random() * 0.1)
-
-    // 5. SIZE & VARIATION
-    const randomScale = 0.7 + Math.random() * 0.5
+    const startPct = (index * 0.2) + (Math.random() * 0.1)
+    const durationPct = 0.3 + (Math.random() * 0.1)
+    const randomScale = 0.6 + Math.random() * 0.5
     const speedFactor = 0.8 + Math.random() * 0.4
-
-    // Store Data
     el.setAttribute('data-start', startPct.toFixed(3))
     el.setAttribute('data-duration', durationPct.toFixed(3))
     el.dataset.speedFactor = speedFactor.toString()
     el.style.setProperty('--random-scale', randomScale.toString())
-
-    // Initial State (Hidden)
     el.style.opacity = '0'
   })
 }
@@ -150,16 +149,14 @@ const setRandomInitialPositions = () => {
 onMounted(() => {
   characterIndices.value = generateRandomIndices()
   isMounted.value = true
-
   const scrollContainer = document.querySelector('.scroll-container')
   if (scrollContainer) {
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true })
   }
-
-  // Initialize
   setTimeout(() => {
     setRandomInitialPositions()
-    handleScroll() // Trigger once to set initial positions
+    handleScroll()
+    setupObserver()
   }, 100)
 })
 
@@ -172,53 +169,116 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-background">
-    <!-- Sticky Header -->
-    <header class="sticky top-10 z-50">
-      <div class="relative w-48 h-32 mx-auto top-title">
-        <img
-            v-if="isMounted"
-            src="/sun.png"
-            class="absolute object-contain z-10 sun"
-            style="mix-blend-mode: normal; opacity: 1 !important;"
-        >
-        <img
-            v-if="isMounted"
-            src="/title_nosun.png"
-            class="relative w-full h-full object-contain z-0 title"
-            style="mix-blend-mode: normal; opacity: 1 !important;"
-        >
+  <div class="app-background font-handwritten text-slate-100">
+
+    <header class="fixed top-0 left-0 w-full z-50 pointer-events-none">
+      <div class="relative w-48 h-32 mx-auto top-title filter drop-shadow-xl mt-4">
+        <img v-if="isMounted" src="/sun.png" class="absolute object-contain z-10 sun">
+        <img v-if="isMounted" src="/title_nosun.png" class="relative w-full h-full object-contain z-20 title">
       </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="z-10">
-      <div class="scroll-container h-screen overflow-y-auto relative">
+    <main class="z-10 h-screen w-full">
+      <div class="scroll-container h-full w-full overflow-y-auto overflow-x-hidden relative">
 
-        <div class="absolute top-0 left-0 w-full h-screen flex items-center justify-center pointer-events-none z-0">
-          <div class="text-center animate-bounce text-white/50">
-            <p class="mb-2 text-sm uppercase tracking-widest">Scroll to explore</p>
-            <svg class="w-6 h-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
+        <section id="hero" class="min-h-[90vh] flex items-center justify-center relative">
+          <div class="text-center z-10 animate-fade-in-up">
+            <div class="animate-bounce text-amber-200/70 mt-32">
+              <p class="uppercase tracking-[0.3em] text-sm mb-2 font-sans font-bold">Scroll to Explore</p>
+              <svg class="w-8 h-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
           </div>
+        </section>
+
+        <section id="artworks" class="min-h-screen relative z-30 px-4 py-20 flex flex-col items-center justify-center">
+          <div class="max-w-6xl w-full mx-auto">
+            <h2 class="section-title text-5xl md:text-7xl text-center mb-24 text-[#cc5500] drop-shadow-md opacity-0 translate-y-10 transition-all duration-1000">
+              ARTWORKS
+            </h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 md:gap-10">
+              <div
+                  v-for="(art, index) in artworks"
+                  :key="art.id"
+                  class="group opacity-0 translate-y-10 transition-all duration-700 hover:z-50"
+                  :style="{ transitionDelay: `${index * 150}ms` }"
+              >
+                <div
+                    class="relative p-[14px] bg-[#8B3A28] rounded-[24px] shadow-2xl overflow-hidden tribal-border-texture transition-transform duration-300 hover:scale-105"
+                    :style="{ transform: `rotate(${art.rot}) translateY(${art.y})` }"
+                >
+
+                  <div class="absolute inset-0 z-0 opacity-80"
+                       style="background:
+                         conic-gradient(from 45deg at 20px 20px, #2C5158 90deg, transparent 0deg) 0 0 / 40px 40px,
+                         conic-gradient(from 225deg at 20px 20px, #D4A373 90deg, transparent 0deg) 0 0 / 40px 40px;
+                         margin: 8px;">
+                  </div>
+
+                  <div class="absolute inset-[6px] rounded-[18px] border-[4px] border-[#3E2723] z-10 pointer-events-none"></div>
+
+                  <div class="absolute top-0 left-0 w-8 h-8 z-20 bg-[#D4A373] clip-triangle-tl"></div>
+                  <div class="absolute top-0 right-0 w-8 h-8 z-20 bg-[#D4A373] clip-triangle-tr"></div>
+                  <div class="absolute bottom-0 left-0 w-8 h-8 z-20 bg-[#D4A373] clip-triangle-bl"></div>
+                  <div class="absolute bottom-0 right-0 w-8 h-8 z-20 bg-[#D4A373] clip-triangle-br"></div>
+
+                  <div class="relative z-10 bg-[#1a1614] rounded-[14px] aspect-[3/4] overflow-hidden shadow-inner border-[2px] border-[#5D4037]">
+                    <div class="w-full h-full flex items-center justify-center opacity-60 mix-blend-luminosity group-hover:opacity-100 group-hover:mix-blend-normal transition-all duration-500 bg-cover bg-center"
+                         :class="art.tone">
+                      <img :src="art.image" :alt="art.title" class="w-full h-full object-cover object-center">
+                    </div>
+
+                    <div class="absolute bottom-0 w-full p-3 bg-gradient-to-t from-black/90 to-transparent text-center">
+                      <h3 class="text-xl text-[#F5DEB3] tracking-wider">{{ art.title }}</h3>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="contact" class="min-h-[80vh] flex flex-col items-center justify-center relative z-30 px-4 pb-32">
+          <h2 class="section-title text-5xl md:text-7xl text-center mb-12 text-[#cc5500] drop-shadow-md opacity-0 translate-y-10 transition-all duration-1000">
+            CONTACT
+          </h2>
+
+          <div class="w-full max-w-xl opacity-0 translate-y-10 transition-all duration-1000 delay-300 contact-form-container">
+            <form class="space-y-6" @submit.prevent>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-1">
+                  <input type="text" placeholder="Name" class="puhoy-input">
+                </div>
+                <div class="space-y-1">
+                  <input type="email" placeholder="Email" class="puhoy-input">
+                </div>
+              </div>
+              <div class="space-y-1">
+                <textarea rows="4" placeholder="Message" class="puhoy-input resize-none"></textarea>
+              </div>
+              <div class="pt-4 flex justify-center">
+                <button class="group relative px-12 py-3 bg-[#a53b19] text-[#f0e6d2] text-2xl tracking-widest hover:bg-[#c2410c] hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg border-y-2 border-[#f0e6d2]/30 rounded-lg">
+                  <span class="absolute left-2 top-1/2 -translate-y-1/2 text-white/40 text-sm">❮❮</span>
+                  <span>SEND</span>
+                  <span class="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 text-sm">❯❯</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <div class="h-24 w-full flex items-center justify-center text-[#f0e6d2]/30 text-sm font-sans">
+          © 2024 Puhoy Portfolio
         </div>
 
         <div class="fixed inset-0 pointer-events-none z-20 overflow-hidden">
-          <div class="square w-48 h-48">
-            <img v-if="isMounted" :src="getCharacterPath(0)" class="w-full h-full object-contain drop-shadow-lg">
-          </div>
-
-          <div class="square w-48 h-48">
-            <img v-if="isMounted" :src="getCharacterPath(1)" class="w-full h-full object-contain drop-shadow-lg">
-          </div>
-
-          <div class="square w-48 h-48">
-            <img v-if="isMounted" :src="getCharacterPath(2)" class="w-full h-full object-contain drop-shadow-lg">
+          <div class="square w-48 h-48" v-for="n in 3" :key="n">
+            <img v-if="isMounted" :src="getCharacterPath(n-1)" class="w-full h-full object-contain">
           </div>
         </div>
-
-        <div class="w-full h-[400vh]"></div>
 
       </div>
     </main>
@@ -226,43 +286,10 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-  overflow-x: hidden;
-}
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand+SC&family=Fredoka:wght@400;600&display=swap');
 
-.top-title {
-  margin: 0 auto;
-  position: relative;
-  z-index: 1;
-  opacity: 1 !important;
-
-  .sun {
-    mix-blend-mode: normal;
-    opacity: 1 !important;
-    height: 45px;
-    top: -12px;
-    left: 12px;
-    animation: spin 10s linear infinite;
-    transform-origin: center;
-  }
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-}
-
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
+.font-handwritten { font-family: 'Patrick Hand SC', cursive; }
+.font-sans { font-family: 'Fredoka', sans-serif; }
 
 .app-background {
   @apply min-h-screen relative;
@@ -274,7 +301,7 @@ html {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: url('/background.png'); /* Ensure this path is correct */
+  background-image: url('/background.png');
   background-size: 300px;
   background-repeat: repeat;
   opacity: 0.6;
@@ -283,26 +310,60 @@ html {
   pointer-events: none;
 }
 
-/* CRITICAL FIX:
-   Removed 'transition: transform'
-   When JS updates position on every scroll event, CSS transitions cause
-   jitters/lag because they try to interpolate between the rapid updates.
-*/
+.sun {
+  mix-blend-mode: normal;
+  height: 45px;
+  top: -12px;
+  left: 12px;
+  animation: spin 20s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
 .square {
-  position: absolute; /* Changed to absolute within the fixed container */
+  position: absolute;
   will-change: transform;
-  /* Only transition opacity for smooth fade in/out */
   transition: opacity 0.2s linear;
   left: 0;
-  /* Default transform to hide initially */
   transform: translateX(-100vw);
 }
 
-/* Hide scrollbars */
+.section-title {
+  -webkit-text-stroke: 1px #4a2c10;
+  text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+}
+
+.puhoy-input {
+  @apply w-full bg-[#3d2817]/60 border-2 border-[#5c3d24] rounded-xl p-4 text-[#f0e6d2] placeholder-[#f0e6d2]/40 outline-none transition-all duration-300 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)];
+}
+
+.puhoy-input:focus {
+  @apply border-[#cc5500] bg-[#3d2817]/80;
+  box-shadow: 0 0 15px rgba(204, 85, 0, 0.2);
+}
+
+section.is-visible .section-title,
+section.is-visible .contact-form-container { opacity: 1; transform: translateY(0); }
+section.is-visible .group { opacity: 1; transform: translateY(0); }
+
 .scroll-container::-webkit-scrollbar { display: none; }
-.scroll-container {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+.scroll-container { -ms-overflow-style: none; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+
+/* --- TRIBAL FRAME SPECIFIC STYLES --- */
+.clip-triangle-tl { clip-path: polygon(0 0, 100% 0, 0 100%); border-top-left-radius: 20px; }
+.clip-triangle-tr { clip-path: polygon(0 0, 100% 0, 100% 100%); border-top-right-radius: 20px; }
+.clip-triangle-bl { clip-path: polygon(0 100%, 0 0, 100% 100%); border-bottom-left-radius: 20px; }
+.clip-triangle-br { clip-path: polygon(100% 0, 100% 100%, 0 100%); border-bottom-right-radius: 20px; }
+
+/* Adds a subtle noise texture to the frame to make it look less "digital" */
+.tribal-border-texture::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E");
+  z-index: 5;
+  pointer-events: none;
+  mix-blend-mode: overlay;
 }
 </style>
