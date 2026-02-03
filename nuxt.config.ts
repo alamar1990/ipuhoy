@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
 
   // Modules
-  modules: ['@nuxtjs/tailwindcss', '@nuxt/eslint', '@nuxt/image'],
+  modules: ['nuxt-auth-utils', '@nuxtjs/tailwindcss', '@nuxt/eslint', '@nuxt/image'],
   devtools: { enabled: true },
 
   // App configuration
@@ -21,6 +21,18 @@ export default defineNuxtConfig({
   css: [
     '~/assets/scss/main.scss',
   ],
+
+  runtimeConfig: {
+    oauth: {
+      google: {
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      },
+    },
+
+    sessionPassword: process.env.NUXT_SESSION_PASSWORD,
+    allowedEmails: process.env.ALLOWED_EMAILS,
+  },
   compatibilityDate: '2025-07-15',
 
   // Vite configuration for SCSS
