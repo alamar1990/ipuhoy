@@ -1,24 +1,21 @@
-import fs from 'node:fs/promises'
-import path from 'node:path'
-import { process } from 'std-env'
+// server/api/artworks.delete.ts
+import { del } from '@vercel/blob'
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
 
     if (!body.filename) {
-      throw createError({ statusCode: 400, statusMessage: 'Filename required' })
+      throw createError({ statusCode: 400, statusMessage: 'URL required' })
     }
 
-    // Security: basic check to prevent deleting outside directory
-    const filename = path.basename(body.filename)
-    const filePath = path.join(process.cwd(), 'public', 'artworks', filename)
-
-    await fs.unlink(filePath)
+    // In Vercel Blob, you delete by the URL
+    await del(body.filename)
 
     return { success: true, message: 'Artifact banished.' }
   }
   catch (error) {
+    console.error(error)
     throw createError({ statusCode: 500, statusMessage: 'Failed to delete' })
   }
 })

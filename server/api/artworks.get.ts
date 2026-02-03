@@ -1,26 +1,29 @@
-import fs from 'node:fs'
+// server/api/artworks.get.ts
+import { list } from '@vercel/blob'
 import path from 'node:path'
-import { process } from 'std-env'
 
-export default defineEventHandler((event) => {
-  // Finds the 'public/artworks' folder on your computer/server
-  const artworksDir = path.join(process.cwd(), 'public', 'artworks')
-
+export default defineEventHandler(async (event) => {
   try {
-    const files = fs.readdirSync(artworksDir)
+    // List files from Vercel Blob
+    const { blobs } = await list()
 
-    // Filters for images and creates the data list
-    return files
-      .filter(file => /\.(jpg|jpeg|png|webp)$/i.test(file))
-      .map((file) => {
-        return {
-          filename: file,
-          title: path.parse(file).name, // Removes extension for the title
-          path: `/artworks/${file}`, // Public URL path
-        }
-      })
+    return blobs.map((blob) => {
+      // Extract a clean title from the pathname (e.g., "The Oracle-123123.jpg")
+      const rawName = path.parse(blob.pathname).name
+      // Optional: Clean up the random string Vercel might add if needed,
+      // but for now, just decoding URL components is usually enough.
+      const title = decodeURIComponent(rawName)
+
+      return {
+        // We use the full URL as the unique identifier for deletion
+        filename: blob.url,
+        title: title,
+        path: blob.url,
+      }
+    })
   }
   catch (error) {
+    console.error(error)
     return []
   }
 })
