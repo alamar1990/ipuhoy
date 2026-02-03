@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 
 // --- State ---
 const scrollY = ref(0)
@@ -7,37 +7,48 @@ const isMounted = ref(false)
 const characterIndices = ref<number[]>([])
 const visibleSections = ref<Set<string>>(new Set())
 
-// --- Data: Artworks ---
-const artworks = [1, 2, 3, 4].map((id) => {
-  // Generate random rotation between -3 and 3 degrees for a natural look
-  const rot = `${(Math.random() * 6 - 3).toFixed(1)}deg`;
-  // Generate random vertical shift between -20 and 20 pixels
-  const y = `${Math.floor(Math.random() * 40 - 20)}px`;
+const contactForm = ref({ name: '', email: '', message: '' })
 
-  // Base artwork data
-  const base = {
-    id,
-    title: [
-      "The Oracle",
-      "Lost Spirit",
-      "Chicken God",
-      "Wandering Eye"
-    ][id - 1],
-    tone: [
-      "shadow-orange-900/50",
-      "shadow-teal-900/50",
-      "shadow-amber-900/50",
-      "shadow-rose-900/50"
-    ][id - 1],
-    image: `/character${id + 1}_no_back.png`
-  };
+// --- FETCH DATA ---
+// Connect to the server route to get the list of files
+const { data: rawArtworks } = await useFetch('/api/artworks')
 
-  return {
-    ...base,
-    rot,
-    y
-  };
-});
+// --- Styling Palette ---
+const tones = [
+  "shadow-orange-900/50",
+  "shadow-teal-900/50",
+  "shadow-amber-900/50",
+  "shadow-rose-900/50",
+  "shadow-purple-900/50",
+  "shadow-emerald-900/50"
+]
+
+// --- Process Artworks ---
+// Transform the server data into UI data (adding styles, rotation, etc.)
+const artworks = computed(() => {
+  // If no data found, return empty
+  if (!rawArtworks.value) return []
+
+  return rawArtworks.value.map((file, index) => {
+    // Generate deterministic random values based on index
+    // This ensures the layout looks "wild" but stays the same on refresh
+    const seed = index * 1337
+    const rot = `${((seed % 10) - 5).toFixed(1)}deg`
+    const y = `${(seed % 60) - 30}px`
+
+    // Cycle through the color tones
+    const tone = tones[index % tones.length]
+
+    return {
+      id: index,
+      title: file.title,
+      image: file.path,
+      tone,
+      rot,
+      y
+    }
+  })
+})
 
 // --- Character Logic (Unchanged) ---
 const generateRandomIndices = () => {
@@ -49,20 +60,10 @@ const generateRandomIndices = () => {
   return allIndices.slice(0, 3)
 }
 
-const contactForm = ref({
-  name: '',
-  email: '',
-  message: ''
-})
-
 const handleContact = () => {
   const { name, email, message } = contactForm.value
-
-  // Construct the mailto link
   const subject = encodeURIComponent(`Portfolio Contact from ${name}`)
   const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`)
-
-  // Open default mail client
   window.location.href = `mailto:ipuhoy@gmail.com?subject=${subject}&body=${body}`
 }
 
@@ -215,7 +216,11 @@ onUnmounted(() => {
               ARTWORKS
             </h2>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 md:gap-10">
+            <div v-if="artworks.length === 0" class="text-center text-white/50 text-xl font-sans">
+              No artworks found in /public/artworks
+            </div>
+
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 md:gap-10">
               <div
                   v-for="(art, index) in artworks"
                   :key="art.id"
@@ -226,7 +231,6 @@ onUnmounted(() => {
                     class="relative p-[14px] bg-[#8B3A28] rounded-[24px] shadow-2xl overflow-hidden tribal-border-texture transition-transform duration-300 hover:scale-105"
                     :style="{ transform: `rotate(${art.rot}) translateY(${art.y})` }"
                 >
-
                   <div class="absolute inset-0 z-0 opacity-80"
                        style="background:
                          conic-gradient(from 45deg at 20px 20px, #2C5158 90deg, transparent 0deg) 0 0 / 40px 40px,
@@ -242,13 +246,20 @@ onUnmounted(() => {
                   <div class="absolute bottom-0 right-0 w-8 h-8 z-20 bg-[#D4A373] clip-triangle-br"></div>
 
                   <div class="relative z-10 bg-[#1a1614] rounded-[14px] aspect-[3/4] overflow-hidden shadow-inner border-[2px] border-[#5D4037]">
-                    <div class="w-full h-full flex items-center justify-center opacity-60 mix-blend-luminosity group-hover:opacity-100 group-hover:mix-blend-normal transition-all duration-500 bg-cover bg-center"
-                         :class="art.tone">
-                      <img :src="art.image" :alt="art.title" class="w-full h-full object-cover object-center">
+                    <div class="w-full h-full relative group-hover:scale-110 transition-transform duration-700 ease-in-out">
+                      <img
+                          :src="art.image"
+                          :alt="art.title"
+                          class="w-full h-full object-cover opacity-70 mix-blend-luminosity group-hover:opacity-100 group-hover:mix-blend-normal transition-all duration-500"
+                      >
+                      <div class="absolute inset-0 pointer-events-none transition-all duration-500"
+                           :class="art.tone"
+                           style="box-shadow: inset 0 0 20px currentColor;">
+                      </div>
                     </div>
 
-                    <div class="absolute bottom-0 w-full p-3 bg-gradient-to-t from-black/90 to-transparent text-center">
-                      <h3 class="text-xl text-[#F5DEB3] tracking-wider">{{ art.title }}</h3>
+                    <div class="absolute bottom-0 w-full p-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent text-center">
+                      <h3 class="text-xl text-[#F5DEB3] tracking-wider font-bold drop-shadow-md">{{ art.title }}</h3>
                     </div>
                   </div>
                 </div>
@@ -321,6 +332,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* All existing styles remain exactly the same */
 @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand+SC&family=Fredoka:wght@400;600&display=swap');
 
 .font-handwritten { font-family: 'Patrick Hand SC', cursive; }
@@ -391,7 +403,6 @@ section.is-visible .group { opacity: 1; transform: translateY(0); }
 .clip-triangle-bl { clip-path: polygon(0 100%, 0 0, 100% 100%); border-bottom-left-radius: 20px; }
 .clip-triangle-br { clip-path: polygon(100% 0, 100% 100%, 0 100%); border-bottom-right-radius: 20px; }
 
-/* Adds a subtle noise texture to the frame to make it look less "digital" */
 .tribal-border-texture::before {
   content: "";
   position: absolute;
